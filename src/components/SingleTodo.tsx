@@ -8,28 +8,38 @@ type Props = {
   todo: Todo;
   todos: Todo[];
   setTodos: React.Dispatch<React.SetStateAction<Todo[]>>;
+  moveToOtherList?: React.Dispatch<React.SetStateAction<Todo[]>>;
 };
 
-const SingleTodo = ({ todo, todos, setTodos }: Props) => {
-  const [edit, setedit] = useState<boolean>(false);
-  const [editTodo, seteditTodo] = useState<string>(todo.todo);
+const SingleTodo: React.FC<Props> = ({ todo, todos, setTodos, moveToOtherList }) => {
+  const [edit, setEdit] = useState<boolean>(false);
+  const [editTodo, setEditTodo] = useState<string>(todo.todo);
 
+  // Move between active and completed lists
   const handleDone = (id: number) => {
-    setTodos(todos.map((todo) => (todo.id === id ? { ...todo, isDone: !todo.isDone } : todo)));
+    if (!moveToOtherList) return;
+    const index = todos.findIndex((t) => t.id === id);
+    if (index === -1) return;
+    const todoItem = todos[index];
+    // Remove from current list
+    const updated = [...todos];
+    updated.splice(index, 1);
+    setTodos(updated);
+    // Add to other list
+    moveToOtherList((prev: Todo[]) => [...prev, { ...todoItem, isDone: !todoItem.isDone }]);
   };
 
   const handleDelete = (id: number) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+    setTodos(todos.filter((t) => t.id !== id));
   };
 
   const handleEdit = (e: React.FormEvent, id: number) => {
     e.preventDefault();
-    setTodos(todos.map((todo) => (todo.id === id ? { ...todo, todo: editTodo } : todo)));
-    setedit(false);
+    setTodos(todos.map((t) => (t.id === id ? { ...t, todo: editTodo } : t)));
+    setEdit(false);
   };
 
   const inputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (edit) {
       setTimeout(() => {
@@ -45,7 +55,7 @@ const SingleTodo = ({ todo, todos, setTodos }: Props) => {
           ref={inputRef}
           value={editTodo}
           placeholder="Edit to do"
-          onChange={(e) => seteditTodo(e.target.value)}
+          onChange={(e) => setEditTodo(e.target.value)}
           className="todos__single--text"
         />
       ) : todo.isDone ? (
@@ -56,7 +66,13 @@ const SingleTodo = ({ todo, todos, setTodos }: Props) => {
 
       <div>
         {!edit && !todo.isDone && (
-          <button className="icon" title="Edit" type="button" onClick={() => setedit(true)}>
+          <button
+            className="icon"
+            title="Edit"
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setEdit(true)}
+          >
             <AiFillEdit />
           </button>
         )}
@@ -69,6 +85,7 @@ const SingleTodo = ({ todo, todos, setTodos }: Props) => {
           className="icon"
           title="Delete item"
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => handleDelete(todo.id)}
         >
           <AiFillDelete />
@@ -77,6 +94,7 @@ const SingleTodo = ({ todo, todos, setTodos }: Props) => {
           className="icon"
           title="Mark as done"
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => handleDone(todo.id)}
         >
           <MdDone />
